@@ -18,6 +18,7 @@ def get_price(soup):
 def get_order_details(uri, cookie_jar, headers, path):
     order_date = None
     order_nr = None
+    delivery_date = None
     c_products = []
 
     lang_dict = {"de": ["Bestellt am ", "Bestellnr."]}
@@ -26,7 +27,7 @@ def get_order_details(uri, cookie_jar, headers, path):
     res = requests.get(uri, headers=headers, cookies=cookie_jar)
     if res.status_code == 200:
         soup = BeautifulSoup(res.content, "html.parser")
-
+      
         # Bestellnummer und Bestelldatum
         nr_date = soup.find_all("span", class_="order-date-invoice-item")
         for span_element in nr_date:
@@ -46,6 +47,14 @@ def get_order_details(uri, cookie_jar, headers, path):
                 # Extrahiere den Preis des Produkts
                 product_price = get_price(soup=p_soup)
 
+                try:
+                    delivery_date = p_soup.select_one("div.a-row > span.a-size-medium.a-color-base.a-text-bold").text.strip()
+                except AttributeError:
+                    try:
+                        delivery_date = p_soup.select_one("div.a-row > span.a-size-medium.a-text-bold").text.strip()
+                    except AttributeError:
+                        delivery_date = None
+                        pass    
                 
                 # Extrahiere den Link zum Produkt
                 product_link = p_soup.select_one("div.a-row > a.a-link-normal")["href"]
@@ -64,25 +73,26 @@ def get_order_details(uri, cookie_jar, headers, path):
                         image_res = requests.get(image_url)
                         if image_res.status_code == 200:
                             # Speichere das Bild auf der Festplatte
-                            with open(os.path.join(path, image_filename), "wb") as f:
+                            img_path = os.path.join(path, image_filename)
+                            with open(img_path, "wb") as f:
                                 f.write(image_res.content)
 
                         c_products.append(
                             Product(
                                 order_date=order_date,
-                                delivery_date=None,
+                                delivery_date=delivery_date,
                                 order_number=order_nr,
                                 product_name=product_name,
                                 product_price=product_price,
                                 product_link=product_link,
-                                image_filename=image_filename,
+                                image_filename=img_path,
                             )
                         )
                         sleep(1)
 
         return c_products
 
-def request_amazon(base_domain, year, user_agent, cookies):
+def request_amazon(base_domain, year, user_agent, cookies, path="img"):
     # user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/120.0.6099.225 Safari/537.36'
     headers = {
         "User-Agent": user_agent,
@@ -107,6 +117,6 @@ def request_amazon(base_domain, year, user_agent, cookies):
             else:
                 for link in links:
                     uri = f"{base_domain}{link.attrs["href"]}"
-                    c_products.extend(get_order_details(uri, cookie_jar, headers, path="img"))
+                    c_products.extend(get_order_details(uri, cookie_jar, headers, path=path))
 
     return c_products

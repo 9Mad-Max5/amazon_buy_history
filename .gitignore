@@ -170,3 +170,4 @@ credentials.py
 *.xlsx
 /img
 *.pkl_
+test.py

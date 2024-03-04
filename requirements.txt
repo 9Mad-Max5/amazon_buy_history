@@ -5,3 +5,5 @@ openpyxl
 pillow
 pyside6
 validate_email_address
+cryptography
+toml

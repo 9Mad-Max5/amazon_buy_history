@@ -181,30 +181,32 @@ def save_to_excel(product_list, excel_file, lang="de"):
         for col in new_data
     }
 
+    # Setzen Sie die locale auf Deutsch für die Währungsformatierung
+    locale.setlocale(locale.LC_ALL, lang)
+
     # Füge neue Daten zum bestehenden DataFrame hinzu
     df = pd.DataFrame(new_data)
 
-    df["Bestelldatum"] = pd.to_datetime(df["Bestelldatum"], dayfirst=True)
-    # Annahme: df ist Ihr DataFrame und 'Preisspalte' ist die Spalte mit den Geldbeträgen
-    # df["Preis"] = df["Preis"].str.replace("€", "")
-    # df["Preis"] = df["Preis"].str.replace(",", ".")
+    # Definiere das Datumsformat
+    date_format = "%d. %B %Y"  # "18. Dezember 2022"
+    df["Bestelldatum"] = pd.to_datetime(df["Bestelldatum"], format=date_format, dayfirst=True)
 
     df["Preis"] = df["Preis"].apply(lambda x: str(x).replace("€", "") if isinstance(x, str) else x)
     df["Preis"] = df["Preis"].apply(lambda x: str(x).replace(",", ".") if isinstance(x, str) else x)
     df["Preis"] = pd.to_numeric(df["Preis"])
 
-    # Setzen Sie die locale auf Deutsch für die Währungsformatierung
-    locale.setlocale(locale.LC_ALL, lang)
-    df["Preis"] = df["Preis"].apply(locale.currency)
+    # df["Preis"] = df["Preis"].apply(locale.currency)
 
     updated_df = pd.concat([existing_df, df], ignore_index=True)
 
     # Speichere das aktualisierte DataFrame in einer Excel-Datei
     try:
         updated_df.to_excel(excel_file, index=False, engine="openpyxl")
-        path_to_img(df=df, file=excel_file)
+        path_to_img(df=updated_df, file=excel_file)
     except PermissionError as e:
         print(str(e))
+    finally:
+        return
 
 
 def path_to_img(df, file):
@@ -230,3 +232,4 @@ def path_to_img(df, file):
 
     # Speichere das Excel-Blatt
     workbook.save(file)
+    return
