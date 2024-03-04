@@ -15,8 +15,10 @@ from amazon_parser import scrape_order_deep
 
 from classes import *
 from constants import *
+from crypto_functions import encrypt_data
 
 import datetime
+from credentials import password
 
 
 def create_driver_running(username, password, totp=None):
@@ -29,7 +31,7 @@ def create_driver_running(username, password, totp=None):
     page = f"https://www.amazon.de/your-orders/orders?timeFilter=year-{end}"
 
     device_id = gethostname()  # Automatisch die Hostname als Device ID verwenden
-    cookie_filename = f"{device_id}_{username}_cookies.pkl"
+    cookie_filename = f"{username}_{device_id}.pkl"
 
     driver = webdriver.Chrome(options=set_chrome_options())
 
@@ -71,7 +73,7 @@ def create_driver_running(username, password, totp=None):
     return driver, user_agent
 
 
-def create_driver(username, password, totp=None):
+def create_driver(username, password, cookie_filename, cookies=None, totp=None):
     # Aktuelles Datum und Uhrzeit abrufen
     now = datetime.datetime.now()
     # Aktuelles Jahr extrahieren
@@ -80,13 +82,10 @@ def create_driver(username, password, totp=None):
     # Amazon-Website-URL
     page = f"https://www.amazon.de/your-orders/orders?timeFilter=year-{end}"
 
-    device_id = gethostname()  # Automatisch die Hostname als Device ID verwenden
-    cookie_filename = f"{device_id}_{username}_cookies.pkl"
-
     driver = webdriver.Chrome(options=set_chrome_options())
 
     if os.path.exists(cookie_filename):
-        load_cookies(driver, cookie_filename)
+        load_cookies(driver, cookies)
         driver.get(page)
         try:
             WebDriverWait(driver, short_wait).until(
@@ -118,7 +117,7 @@ def create_driver(username, password, totp=None):
     # print("Headers:", headers)
     user_agent = driver.execute_script("return navigator.userAgent;")
 
-    save_cookies(driver, cookie_filename)
+    save_cookies(driver, cookie_filename, password)
     driver.quit()
 
     return user_agent
@@ -173,42 +172,34 @@ def crawl_amazon(driver, lang):
     return c_products
 
 
-def save_cookies(driver, filename):
+def save_cookies(driver, filename, password):
     # Hole die Cookies vom WebDriver
     cookies = driver.get_cookies()
 
+    enc_cookies = encrypt_data(cookies, password)
     # Speichere die Cookies in einer Datei
     with open(filename, "wb") as file:
-        pickle.dump(cookies, file)
+        pickle.dump(enc_cookies, file)
 
 
-def load_cookies(driver, filename):
-    if os.path.exists(filename) and os.path.isfile(filename):
-        print("Loading cookies from " + filename)
-        cookies = pickle.load(open(filename, "rb"))
+def load_cookies(driver, cookies):
+    driver.execute_cdp_cmd("Network.enable", {})
 
-        # Enables network tracking so we may use Network.setCookie method
-        driver.execute_cdp_cmd("Network.enable", {})
+    # Iterate through pickle dict and add all the cookies
+    for cookie in cookies:
+        # Fix issue Chrome exports 'expiry' key but expects 'expire' on import
+        if "expiry" in cookie:
+            cookie["expires"] = cookie["expiry"]
+            del cookie["expiry"]
 
-        # Iterate through pickle dict and add all the cookies
-        for cookie in cookies:
-            # Fix issue Chrome exports 'expiry' key but expects 'expire' on import
-            if "expiry" in cookie:
-                cookie["expires"] = cookie["expiry"]
-                del cookie["expiry"]
+        # Replace domain 'apple.com' with 'microsoft.com' cookies
+        cookie["domain"] = cookie["domain"].replace("apple.com", "microsoft.com")
 
-            # Replace domain 'apple.com' with 'microsoft.com' cookies
-            cookie["domain"] = cookie["domain"].replace("apple.com", "microsoft.com")
+        # Set the actual cookie
+        driver.execute_cdp_cmd("Network.setCookie", cookie)
 
-            # Set the actual cookie
-            driver.execute_cdp_cmd("Network.setCookie", cookie)
-
-        # Disable network tracking
-        driver.execute_cdp_cmd("Network.disable", {})
-        return 1
-
-    print("Cookie file " + filename + " does not exist.")
-    return 0
+    # Disable network tracking
+    driver.execute_cdp_cmd("Network.disable", {})
 
 
 def login_procedure(driver, username, password, sel_timeout, totp=None):
@@ -342,7 +333,7 @@ def set_chrome_options() -> Options:
     Chrome options for headless browser is enabled.
     """
     chrome_options = Options()
-    # chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--headless")
     chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
