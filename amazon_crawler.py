@@ -18,7 +18,7 @@ from constants import *
 from crypto_functions import encrypt_data
 
 import datetime
-from credentials import password
+# from credentials import password
 
 
 def create_driver_running(username, password, totp=None):

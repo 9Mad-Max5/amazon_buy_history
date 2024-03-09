@@ -182,6 +182,58 @@
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_2">
+       <item row="6" column="2">
+        <widget class="QComboBox" name="cb_local"/>
+       </item>
+       <item row="10" column="2">
+        <widget class="QPushButton" name="b_set_path">
+         <property name="text">
+          <string>Ordner auswählen</string>
+         </property>
+        </widget>
+       </item>
+       <item row="15" column="0" colspan="3">
+        <widget class="QTextBrowser" name="bro_text"/>
+       </item>
+       <item row="12" column="0" colspan="3">
+        <spacer name="horizontalSpacer_3">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="6" column="0">
+        <widget class="QLabel" name="l_local">
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Sprache</string>
+         </property>
+        </widget>
+       </item>
+       <item row="13" column="2">
+        <widget class="QPushButton" name="b_start">
+         <property name="text">
+          <string>Lade Daten</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QPushButton" name="b_logout">
+         <property name="text">
+          <string>Logout</string>
+         </property>
+        </widget>
+       </item>
        <item row="5" column="0">
         <widget class="QLabel" name="l_start_date">
          <property name="font">
@@ -193,9 +245,6 @@
           <string>Startjahr</string>
          </property>
         </widget>
-       </item>
-       <item row="10" column="1">
-        <widget class="QLineEdit" name="le_path"/>
        </item>
        <item row="3" column="0" colspan="3">
         <spacer name="horizontalSpacer">
@@ -209,6 +258,19 @@
           </size>
          </property>
         </spacer>
+       </item>
+       <item row="10" column="1">
+        <widget class="QLineEdit" name="le_path"/>
+       </item>
+       <item row="5" column="2">
+        <widget class="QDateEdit" name="start_date"/>
+       </item>
+       <item row="17" column="0" colspan="3">
+        <widget class="QProgressBar" name="ba_progress">
+         <property name="value">
+          <number>24</number>
+         </property>
+        </widget>
        </item>
        <item row="4" column="0" colspan="3">
         <widget class="QLabel" name="l_settings">
@@ -229,41 +291,6 @@
          </property>
         </widget>
        </item>
-       <item row="5" column="2">
-        <widget class="QDateEdit" name="start_date"/>
-       </item>
-       <item row="6" column="0">
-        <widget class="QLabel" name="l_local">
-         <property name="font">
-          <font>
-           <pointsize>10</pointsize>
-          </font>
-         </property>
-         <property name="text">
-          <string>Sprache</string>
-         </property>
-        </widget>
-       </item>
-       <item row="12" column="0" colspan="3">
-        <spacer name="horizontalSpacer_3">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>40</width>
-           <height>20</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="2" column="0">
-        <widget class="QPushButton" name="b_logout">
-         <property name="text">
-          <string>Logout</string>
-         </property>
-        </widget>
-       </item>
        <item row="10" column="0">
         <widget class="QLabel" name="l_path">
          <property name="font">
@@ -276,30 +303,20 @@
          </property>
         </widget>
        </item>
-       <item row="6" column="2">
-        <widget class="QComboBox" name="cb_local"/>
-       </item>
-       <item row="10" column="2">
-        <widget class="QPushButton" name="b_set_path">
+       <item row="18" column="1">
+        <widget class="QLabel" name="l_ver">
          <property name="text">
-          <string>Ordner auswählen</string>
+          <string>Version: </string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
          </property>
         </widget>
        </item>
-       <item row="13" column="2">
-        <widget class="QPushButton" name="b_start">
+       <item row="18" column="2">
+        <widget class="QLabel" name="l_ver_n">
          <property name="text">
-          <string>Lade Daten</string>
-         </property>
-        </widget>
-       </item>
-       <item row="15" column="0" colspan="3">
-        <widget class="QTextBrowser" name="bro_text"/>
-       </item>
-       <item row="17" column="0" colspan="3">
-        <widget class="QProgressBar" name="ba_progress">
-         <property name="value">
-          <number>24</number>
+          <string>TextLabel</string>
          </property>
         </widget>
        </item>

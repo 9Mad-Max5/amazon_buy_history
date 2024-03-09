@@ -21,8 +21,10 @@ def load_settings():
         update_settings(path)
 
     # Überprüfen, ob der Ordner existiert, andernfalls erstellen
-    if not os.path.exists(path):
-        os.makedirs(path)
+    paths = [path, os.path.join(path, "img")]
+    for p in paths:
+        if not os.path.exists(p):
+            os.makedirs(p)
     return path
 
 def update_settings(path):

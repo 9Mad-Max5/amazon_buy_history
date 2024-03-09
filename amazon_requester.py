@@ -73,7 +73,7 @@ def get_order_details(uri, cookie_jar, headers, path):
                         image_res = requests.get(image_url)
                         if image_res.status_code == 200:
                             # Speichere das Bild auf der Festplatte
-                            img_path = os.path.join(path, image_filename)
+                            img_path = os.path.join(path, "img", image_filename)
                             with open(img_path, "wb") as f:
                                 f.write(image_res.content)
 

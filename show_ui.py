@@ -1,4 +1,4 @@
-from gui import Ui_MainWindow
+from gui_ui import Ui_MainWindow
 from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog
 from PySide6.QtCore import QObject, QThread, Signal, Slot, QEvent
 
@@ -12,6 +12,7 @@ from datetime import datetime
 from crypto_functions import decrypt_data 
 
 from settings_handler import *
+from version import version
 
 from classes import (
     InvalidEmailError,
@@ -39,8 +40,8 @@ class MyMainWindow(QMainWindow):
 
         # Create worker thread
         self.worker_thread = QThread()
-        self.worker = None
         self.worker_thread.finished.connect(self.worker_thread.deleteLater)
+        self.worker = None
 
         # Initialisiere die Benutzeroberfläche aus der generierten Klasse
         self.ui = Ui_MainWindow()
@@ -54,6 +55,7 @@ class MyMainWindow(QMainWindow):
         self.ui.cb_local.currentIndexChanged.connect(self.on_language_change)
         self.local = self.ui.cb_local.currentText()
         self.ui.le_path.setText(self.path)
+        self.ui.l_ver_n.setText(version)
 
         # Verbinde einen Button mit einer Funktion
         self.ui.b_login.clicked.connect(self.get_login_infos)
@@ -123,7 +125,6 @@ class MyMainWindow(QMainWindow):
             update_settings(self.path)
 
     def start_crawling(self):
-        self.ui.b_start.setEnabled(False)
         start_date = self.ui.start_date.date()
         self.start_year = start_date.year()
         self.worker = RequestWorker(start_year=self.start_year , end_year=self.end_year, base_domain=self.base_domain, user_agent=self.user_agent, cookies=self.cookies, path=self.path)
@@ -195,6 +196,7 @@ class MyMainWindow(QMainWindow):
 
     def update_progress(self, progress, item_name):
         # Hier aktualisieren Sie die Anzeige des Fortschritts und des aktuellen Elementnamens
+        self.ui.b_start.setEnabled(False)
         self.ui.ba_progress.setValue(progress)
         self.ui.bro_text.append(f"Abgeschlossen mit dem laden von Jahr {item_name}")
 
@@ -204,6 +206,7 @@ class MyMainWindow(QMainWindow):
     def worker_finished(self):
         # Aktiviere den Start-Button, wenn der Worker-Prozess beendet ist
         self.ui.b_start.setEnabled(True)
+        self.worker_thread.quit()
 
 class RequestWorker(QObject):
     progress_start = Signal(int)
@@ -235,7 +238,7 @@ class RequestWorker(QObject):
             progress = int((i + 1) / total_items * 100)
             self.progress_updated.emit(progress, year)
 
-        save_to_excel(product_list=self.product_classes, excel_file=f"amazon_shopping_history_{self.start_year}-{self.end_year}.xlsx")
+        save_to_excel(product_list=self.product_classes, excel_file=os.path.join(self.path, f"amazon_shopping_history_{self.start_year}-{self.end_year}.xlsx"))
         self.finished.emit()
 
 if __name__ == "__main__":

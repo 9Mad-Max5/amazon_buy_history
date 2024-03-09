@@ -227,9 +227,11 @@ def path_to_img(df, file):
             sheet.row_dimensions[r_idx].height = img.height * 0.85
             sheet.column_dimensions["F"].width = img.width / 7
 
-        except:
-            pass
+            # Legen Sie die Wraptext-Eigenschaft auf "True" fest
+            sheet.column_dimensions['D'].wraptext = True
+
+        except Exception as e:
+            print(e)
 
     # Speichere das Excel-Blatt
     workbook.save(file)
-    return

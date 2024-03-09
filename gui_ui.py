@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'gui.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.1
+## Created by: Qt User Interface Compiler version 6.6.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -105,7 +105,7 @@ class Ui_MainWindow(object):
 
         self.formLayout.setWidget(5, QFormLayout.FieldRole, self.l_totp_error)
 
-        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.formLayout.setItem(6, QFormLayout.FieldRole, self.horizontalSpacer_2)
 
@@ -126,22 +126,68 @@ class Ui_MainWindow(object):
         self.gridLayout_2 = QGridLayout(self.gridLayoutWidget)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
-        self.l_start_date = QLabel(self.gridLayoutWidget)
-        self.l_start_date.setObjectName(u"l_start_date")
+        self.cb_local = QComboBox(self.gridLayoutWidget)
+        self.cb_local.setObjectName(u"cb_local")
+
+        self.gridLayout_2.addWidget(self.cb_local, 6, 2, 1, 1)
+
+        self.b_set_path = QPushButton(self.gridLayoutWidget)
+        self.b_set_path.setObjectName(u"b_set_path")
+
+        self.gridLayout_2.addWidget(self.b_set_path, 10, 2, 1, 1)
+
+        self.bro_text = QTextBrowser(self.gridLayoutWidget)
+        self.bro_text.setObjectName(u"bro_text")
+
+        self.gridLayout_2.addWidget(self.bro_text, 15, 0, 1, 3)
+
+        self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.gridLayout_2.addItem(self.horizontalSpacer_3, 12, 0, 1, 3)
+
+        self.l_local = QLabel(self.gridLayoutWidget)
+        self.l_local.setObjectName(u"l_local")
         font1 = QFont()
         font1.setPointSize(10)
+        self.l_local.setFont(font1)
+
+        self.gridLayout_2.addWidget(self.l_local, 6, 0, 1, 1)
+
+        self.b_start = QPushButton(self.gridLayoutWidget)
+        self.b_start.setObjectName(u"b_start")
+
+        self.gridLayout_2.addWidget(self.b_start, 13, 2, 1, 1)
+
+        self.b_logout = QPushButton(self.gridLayoutWidget)
+        self.b_logout.setObjectName(u"b_logout")
+
+        self.gridLayout_2.addWidget(self.b_logout, 2, 0, 1, 1)
+
+        self.l_start_date = QLabel(self.gridLayoutWidget)
+        self.l_start_date.setObjectName(u"l_start_date")
         self.l_start_date.setFont(font1)
 
         self.gridLayout_2.addWidget(self.l_start_date, 5, 0, 1, 1)
+
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.gridLayout_2.addItem(self.horizontalSpacer, 3, 0, 1, 3)
 
         self.le_path = QLineEdit(self.gridLayoutWidget)
         self.le_path.setObjectName(u"le_path")
 
         self.gridLayout_2.addWidget(self.le_path, 10, 1, 1, 1)
 
-        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.start_date = QDateEdit(self.gridLayoutWidget)
+        self.start_date.setObjectName(u"start_date")
 
-        self.gridLayout_2.addItem(self.horizontalSpacer, 3, 0, 1, 3)
+        self.gridLayout_2.addWidget(self.start_date, 5, 2, 1, 1)
+
+        self.ba_progress = QProgressBar(self.gridLayoutWidget)
+        self.ba_progress.setObjectName(u"ba_progress")
+        self.ba_progress.setValue(24)
+
+        self.gridLayout_2.addWidget(self.ba_progress, 17, 0, 1, 3)
 
         self.l_settings = QLabel(self.gridLayoutWidget)
         self.l_settings.setObjectName(u"l_settings")
@@ -154,57 +200,22 @@ class Ui_MainWindow(object):
 
         self.gridLayout_2.addWidget(self.l_settings, 4, 0, 1, 3)
 
-        self.start_date = QDateEdit(self.gridLayoutWidget)
-        self.start_date.setObjectName(u"start_date")
-
-        self.gridLayout_2.addWidget(self.start_date, 5, 2, 1, 1)
-
-        self.l_local = QLabel(self.gridLayoutWidget)
-        self.l_local.setObjectName(u"l_local")
-        self.l_local.setFont(font1)
-
-        self.gridLayout_2.addWidget(self.l_local, 6, 0, 1, 1)
-
-        self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
-
-        self.gridLayout_2.addItem(self.horizontalSpacer_3, 12, 0, 1, 3)
-
-        self.b_logout = QPushButton(self.gridLayoutWidget)
-        self.b_logout.setObjectName(u"b_logout")
-
-        self.gridLayout_2.addWidget(self.b_logout, 2, 0, 1, 1)
-
         self.l_path = QLabel(self.gridLayoutWidget)
         self.l_path.setObjectName(u"l_path")
         self.l_path.setFont(font1)
 
         self.gridLayout_2.addWidget(self.l_path, 10, 0, 1, 1)
 
-        self.cb_local = QComboBox(self.gridLayoutWidget)
-        self.cb_local.setObjectName(u"cb_local")
+        self.l_ver = QLabel(self.gridLayoutWidget)
+        self.l_ver.setObjectName(u"l_ver")
+        self.l_ver.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
 
-        self.gridLayout_2.addWidget(self.cb_local, 6, 2, 1, 1)
+        self.gridLayout_2.addWidget(self.l_ver, 18, 1, 1, 1)
 
-        self.b_set_path = QPushButton(self.gridLayoutWidget)
-        self.b_set_path.setObjectName(u"b_set_path")
+        self.l_ver_n = QLabel(self.gridLayoutWidget)
+        self.l_ver_n.setObjectName(u"l_ver_n")
 
-        self.gridLayout_2.addWidget(self.b_set_path, 10, 2, 1, 1)
-
-        self.b_start = QPushButton(self.gridLayoutWidget)
-        self.b_start.setObjectName(u"b_start")
-
-        self.gridLayout_2.addWidget(self.b_start, 13, 2, 1, 1)
-
-        self.bro_text = QTextBrowser(self.gridLayoutWidget)
-        self.bro_text.setObjectName(u"bro_text")
-
-        self.gridLayout_2.addWidget(self.bro_text, 15, 0, 1, 3)
-
-        self.ba_progress = QProgressBar(self.gridLayoutWidget)
-        self.ba_progress.setObjectName(u"ba_progress")
-        self.ba_progress.setValue(24)
-
-        self.gridLayout_2.addWidget(self.ba_progress, 17, 0, 1, 3)
+        self.gridLayout_2.addWidget(self.l_ver_n, 18, 2, 1, 1)
 
         self.stackedWidget.addWidget(self.page_carwl_action)
         MainWindow.setCentralWidget(self.centralwidget)
@@ -238,12 +249,14 @@ class Ui_MainWindow(object):
         self.l_totp.setText(QCoreApplication.translate("MainWindow", u"2FA-Code:", None))
         self.l_totp_error.setText("")
         self.b_login.setText(QCoreApplication.translate("MainWindow", u"Login", None))
+        self.b_set_path.setText(QCoreApplication.translate("MainWindow", u"Ordner ausw\u00e4hlen", None))
+        self.l_local.setText(QCoreApplication.translate("MainWindow", u"Sprache", None))
+        self.b_start.setText(QCoreApplication.translate("MainWindow", u"Lade Daten", None))
+        self.b_logout.setText(QCoreApplication.translate("MainWindow", u"Logout", None))
         self.l_start_date.setText(QCoreApplication.translate("MainWindow", u"Startjahr", None))
         self.l_settings.setText(QCoreApplication.translate("MainWindow", u"Einstellungen", None))
-        self.l_local.setText(QCoreApplication.translate("MainWindow", u"Sprache", None))
-        self.b_logout.setText(QCoreApplication.translate("MainWindow", u"Logout", None))
         self.l_path.setText(QCoreApplication.translate("MainWindow", u"Dateipfad", None))
-        self.b_set_path.setText(QCoreApplication.translate("MainWindow", u"Ordner ausw\u00e4hlen", None))
-        self.b_start.setText(QCoreApplication.translate("MainWindow", u"Lade Daten", None))
+        self.l_ver.setText(QCoreApplication.translate("MainWindow", u"Version: ", None))
+        self.l_ver_n.setText(QCoreApplication.translate("MainWindow", u"TextLabel", None))
     # retranslateUi
 
