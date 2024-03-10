@@ -1,5 +1,6 @@
 import requests
 import os
+import pdb
 
 from bs4 import BeautifulSoup
 from classes import Product
@@ -16,6 +17,7 @@ def get_price(soup):
 
 
 def get_order_details(uri, cookie_jar, headers, path):
+    print(f"Get order details: {uri}")
     order_date = None
     order_nr = None
     delivery_date = None
@@ -97,7 +99,7 @@ def request_amazon(base_domain, year, user_agent, cookies, path="img"):
     headers = {
         "User-Agent": user_agent,
     }
-
+    print(f"Request year: {year}")
     # Füge jedes Cookie aus der Liste zum Cookie-Jar hinzu
     cookie_jar = requests.cookies.RequestsCookieJar()
     for cookie in cookies:
@@ -105,6 +107,8 @@ def request_amazon(base_domain, year, user_agent, cookies, path="img"):
 
     c_products = []
     for start in range(0,50,10):
+        print(f"Request items beginning: {start}")
+
         url = f"{base_domain}/your-orders/orders?timeFilter=year-{year}&startIndex={start}"
         # url = "https://www.amazon.de/gp/your-account/order-details/ref=ppx_yo_dt_b_order_details_o00?ie=UTF8&orderID=305-1120833-4455507"
         res = requests.get(url, headers=headers, cookies=cookie_jar)
