@@ -27,6 +27,7 @@ class MyMainWindow(QMainWindow):
         super().__init__()
 
         self.credentials = {}
+        self.username = None
         self.start_year = None
         self.product_classes = []
         self.driver = None
@@ -37,6 +38,7 @@ class MyMainWindow(QMainWindow):
         self.end_year = self.get_actual_year()
         self.cookie_filename = None
         self.path=load_settings()
+        self.file = None
 
         # Create worker thread
         self.worker_thread = QThread()
@@ -69,6 +71,8 @@ class MyMainWindow(QMainWindow):
 
         if validate_email(self.ui.le_email.text()):
             self.credentials["mail"] = self.ui.le_email.text()
+            self.username = self.credentials["mail"].split("@")[0]
+            self.file = os.path.join(self.path, f"amazon_shopping_history_{self.username}.xlsx")
         else:
             self.ui.l_email_error.setText(
                 "Ungültige eingabe! Keine valide Mailadresse!"
@@ -125,6 +129,8 @@ class MyMainWindow(QMainWindow):
             update_settings(self.path)
 
     def start_crawling(self):
+        
+        self.ui.b_start.setEnabled(False)
         start_date = self.ui.start_date.date()
         self.start_year = start_date.year()
         self.worker = RequestWorker(start_year=self.start_year , end_year=self.end_year, base_domain=self.base_domain, user_agent=self.user_agent, cookies=self.cookies, path=self.path)
@@ -238,7 +244,7 @@ class RequestWorker(QObject):
             progress = int((i + 1) / total_items * 100)
             self.progress_updated.emit(progress, year)
 
-        save_to_excel(product_list=self.product_classes, excel_file=os.path.join(self.path, f"amazon_shopping_history_{self.start_year}-{self.end_year}.xlsx"))
+        save_to_excel(product_list=self.product_classes, excel_file=self.file)
         self.finished.emit()
 
 if __name__ == "__main__":
