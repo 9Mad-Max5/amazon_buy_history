@@ -171,3 +171,4 @@ credentials.py
 /img
 *.pkl_
 test.py
+settings.toml

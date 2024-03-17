@@ -1,11 +1,14 @@
 import requests
 import os
-import pdb
 
 from bs4 import BeautifulSoup
 from classes import Product
 from time import sleep
 
+from logger_config import setup_logging
+import random
+
+import requests
 
 def get_price(soup):
     price_path = ["div.a-row > span.a-size-small.a-color-price > nobr", "div.a-row > div.a-row.a-spacing-top-mini.gift-card-instance > div.a-column.a-span2"]
@@ -16,8 +19,9 @@ def get_price(soup):
             return product_price
 
 
-def get_order_details(uri, cookie_jar, headers, path):
-    print(f"Get order details: {uri}")
+def get_order_details(ses, uri, path):
+    logger = setup_logging()
+    logger.debug(f"Get order details: {uri}")
     order_date = None
     order_nr = None
     delivery_date = None
@@ -26,7 +30,9 @@ def get_order_details(uri, cookie_jar, headers, path):
     lang_dict = {"de": ["Bestellt am ", "Bestellnr."]}
     lang = "de"
 
-    res = requests.get(uri, headers=headers, cookies=cookie_jar)
+    sleep(random.randint(10, 30))
+    res = ses.get(uri)
+    logger.debug(f"Get order details: {res.status_code}")
     if res.status_code == 200:
         soup = BeautifulSoup(res.content, "html.parser")
       
@@ -62,7 +68,7 @@ def get_order_details(uri, cookie_jar, headers, path):
                 product_link = p_soup.select_one("div.a-row > a.a-link-normal")["href"]
                 # Extrahiere das a-Element basierend auf der Klasse und dem href-Attribut
                 a_elements = p_soup.find_all('a', class_='a-link-normal', href=True)
-
+                logger.debug(f"Get order details: {product_link} loading picture")
                 for a_element in a_elements:
                     # Extrahiere das img-Element innerhalb des a-Elements
                     img_element = a_element.find('img')
@@ -72,13 +78,15 @@ def get_order_details(uri, cookie_jar, headers, path):
                         # Extrahiere Dateiname aus der Bild-URL
                         image_filename = image_url.split('/')[-1]
                         # Lade das Bild herunter
-                        image_res = requests.get(image_url)
+                        sleep(random.randint(10, 30))
+                        image_res = ses.get(image_url)
                         if image_res.status_code == 200:
                             # Speichere das Bild auf der Festplatte
                             img_path = os.path.join(path, "img", image_filename)
                             with open(img_path, "wb") as f:
                                 f.write(image_res.content)
 
+                        logger.debug(f"Get product and loading data is done")
                         c_products.append(
                             Product(
                                 order_date=order_date,
@@ -90,28 +98,36 @@ def get_order_details(uri, cookie_jar, headers, path):
                                 image_filename=img_path,
                             )
                         )
-                        sleep(1)
+                        
 
         return c_products
 
 def request_amazon(base_domain, year, user_agent, cookies, path="img"):
     # user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/120.0.6099.225 Safari/537.36'
+    logger = setup_logging()
+
+    ses = requests.Session()
     headers = {
         "User-Agent": user_agent,
     }
-    print(f"Request year: {year}")
+    logger.info(f"Request year: {year}")
     # Füge jedes Cookie aus der Liste zum Cookie-Jar hinzu
     cookie_jar = requests.cookies.RequestsCookieJar()
     for cookie in cookies:
         cookie_jar.set(cookie['name'], cookie['value'])
+    
+    ses.cookies = cookie_jar
+    ses.headers.update(headers)
 
     c_products = []
     for start in range(0,50,10):
-        print(f"Request items beginning: {start}")
-
+        logger.info(f"Request items beginning: {start}")
         url = f"{base_domain}/your-orders/orders?timeFilter=year-{year}&startIndex={start}"
+        logger.debug(f"Request url: {url}")
         # url = "https://www.amazon.de/gp/your-account/order-details/ref=ppx_yo_dt_b_order_details_o00?ie=UTF8&orderID=305-1120833-4455507"
-        res = requests.get(url, headers=headers, cookies=cookie_jar)
+        sleep(random.randint(10, 30))
+        res = ses.get(url)
+        logger.debug(f"Response status code: {res.status_code}")
         if res.status_code == 200:
             soup = BeautifulSoup(res.content, "html.parser")
             links = soup.find_all("a", class_="a-link-normal yohtmlc-order-details-link", href=True)
@@ -121,6 +137,6 @@ def request_amazon(base_domain, year, user_agent, cookies, path="img"):
             else:
                 for link in links:
                     uri = f"{base_domain}{link.attrs["href"]}"
-                    c_products.extend(get_order_details(uri, cookie_jar, headers, path=path))
+                    c_products.extend(get_order_details(ses, uri, path=path))
 
     return c_products

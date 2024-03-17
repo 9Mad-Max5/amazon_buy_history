@@ -6,6 +6,8 @@ from PIL import Image
 from openpyxl import load_workbook
 from openpyxl.drawing.image import Image
 
+from logger_config import setup_logging
+
 # def extract_amazon_orders(html_content):
 #     soup = BeautifulSoup(html_content, "html.parser")
 
@@ -151,6 +153,8 @@ from openpyxl.drawing.image import Image
 
 def save_to_excel(product_list, excel_file, lang="de"):
     # Überprüfen, ob die Excel-Datei bereits existiert
+    logger = setup_logging()
+    logger.info(f"Saving {len(product_list)} products to {excel_file}")
     if os.path.exists(excel_file):
         # Lade vorhandene Daten aus der Excel-Datei
         existing_df = pd.read_excel(excel_file)
@@ -189,10 +193,16 @@ def save_to_excel(product_list, excel_file, lang="de"):
 
     # Definiere das Datumsformat
     date_format = "%d. %B %Y"  # "18. Dezember 2022"
-    df["Bestelldatum"] = pd.to_datetime(df["Bestelldatum"], format=date_format, dayfirst=True)
+    df["Bestelldatum"] = pd.to_datetime(
+        df["Bestelldatum"], format=date_format, dayfirst=True
+    )
 
-    df["Preis"] = df["Preis"].apply(lambda x: str(x).replace("€", "") if isinstance(x, str) else x)
-    df["Preis"] = df["Preis"].apply(lambda x: str(x).replace(",", ".") if isinstance(x, str) else x)
+    df["Preis"] = df["Preis"].apply(
+        lambda x: str(x).replace("€", "") if isinstance(x, str) else x
+    )
+    df["Preis"] = df["Preis"].apply(
+        lambda x: str(x).replace(",", ".") if isinstance(x, str) else x
+    )
     df["Preis"] = pd.to_numeric(df["Preis"])
 
     # df["Preis"] = df["Preis"].apply(locale.currency)
@@ -205,11 +215,13 @@ def save_to_excel(product_list, excel_file, lang="de"):
         path_to_img(df=updated_df, file=excel_file)
     except PermissionError as e:
         print(str(e))
+        logger.error(str(e))
     finally:
         return
 
 
 def path_to_img(df, file):
+    logger = setup_logging()
     # Öffnen Sie die vorhandene Excel-Datei
     workbook = load_workbook(file)
 
@@ -219,6 +231,7 @@ def path_to_img(df, file):
     # Füge die Bilder in die entsprechenden Zellen ein
     for r_idx, image_path in enumerate(df["Bild"], start=2):
         try:
+            logger.debug(f"Saving {image_path} to {file}")
             img = Image(image_path)
             sheet.add_image(img, f"F{r_idx}")
 
@@ -228,10 +241,11 @@ def path_to_img(df, file):
             sheet.column_dimensions["F"].width = img.width / 7
 
             # Legen Sie die Wraptext-Eigenschaft auf "True" fest
-            sheet.column_dimensions['D'].wraptext = True
+            sheet.column_dimensions["D"].wraptext = True
 
         except Exception as e:
             print(e)
+            logger.error(e)
 
     # Speichere das Excel-Blatt
     workbook.save(file)

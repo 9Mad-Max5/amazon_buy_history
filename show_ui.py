@@ -13,6 +13,7 @@ from crypto_functions import decrypt_data
 
 from settings_handler import *
 from version import version
+from logger_config import setup_logging
 
 from classes import (
     InvalidEmailError,
@@ -39,10 +40,10 @@ class MyMainWindow(QMainWindow):
         self.cookie_filename = None
         self.path=load_settings()
         self.file = None
+        self.logger = setup_logging()
 
         # Create worker thread
-        self.worker_thread = QThread()
-        self.worker_thread.finished.connect(self.worker_thread.deleteLater)
+        self.worker_thread = None
         self.worker = None
 
         # Initialisiere die Benutzeroberfläche aus der generierten Klasse
@@ -108,6 +109,8 @@ class MyMainWindow(QMainWindow):
                 )
                 self.change_view(1)
                 self.load_cookies_to_var()
+                self.logger.debug(f"Erfolgreich angemeldet")
+
             except InvalidEmailError as e:
                 self.ui.l_email_error.setText(str(e))
             except InvalidPasswordError as e:
@@ -133,11 +136,16 @@ class MyMainWindow(QMainWindow):
         self.ui.b_start.setEnabled(False)
         start_date = self.ui.start_date.date()
         self.start_year = start_date.year()
-        self.worker = RequestWorker(start_year=self.start_year , end_year=self.end_year, base_domain=self.base_domain, user_agent=self.user_agent, cookies=self.cookies, path=self.path)
+        
+        self.worker_thread = QThread()
+        self.worker_thread.finished.connect(self.worker_thread.deleteLater)
+        self.worker = RequestWorker(start_year=self.start_year , end_year=self.end_year,
+                                     base_domain=self.base_domain, user_agent=self.user_agent,
+                                       cookies=self.cookies, path=self.path, file=self.file)
         self.worker.moveToThread(self.worker_thread)
         self.worker.finished.connect(self.worker_finished)
         self.worker.progress_updated.connect(self.update_progress)
-        self.worker.progress_start.connect(self.start_progress)
+        self.worker.info.connect(self.info)
         self.worker_thread.started.connect(self.worker.run)
         self.worker_thread.start()
 
@@ -146,7 +154,7 @@ class MyMainWindow(QMainWindow):
             with open(self.cookie_filename, 'rb') as f:
                 enc_cookies = pickle.load(f)
 
-            self.cookies = decrypt_data(encrypted_data=enc_cookies, password=self.credentials["pw"])
+            self.cookies = decrypt_data(encrypted_data=enc_cookies,password=self.credentials["pw"])
 
     def set_cookie_filename(self):
         device_id = gethostname()
@@ -187,10 +195,10 @@ class MyMainWindow(QMainWindow):
         self.ui.ba_progress.setValue(0)
 
     def event(self, event):
-        if event.type() == QEvent.Close:
-            if self.worker_thread.isRunning():
-                self.worker_thread.quit()
-                self.worker_thread.wait()
+        # if event.type() == QEvent.Close:
+        #     if self.worker_thread.isRunning():
+        #         self.worker_thread.quit()
+        #         self.worker_thread.wait()
         return super().event(event)
     
     def clear_error_label(self):
@@ -206,8 +214,8 @@ class MyMainWindow(QMainWindow):
         self.ui.ba_progress.setValue(progress)
         self.ui.bro_text.append(f"Abgeschlossen mit dem laden von Jahr {item_name}")
 
-    def start_progress(self, item_name):
-        self.ui.bro_text.append(f"Starte mit laden von Jahr {item_name}")
+    def info(self, item_name):
+        self.ui.bro_text.append(item_name)
 
     def worker_finished(self):
         # Aktiviere den Start-Button, wenn der Worker-Prozess beendet ist
@@ -215,11 +223,11 @@ class MyMainWindow(QMainWindow):
         self.worker_thread.quit()
 
 class RequestWorker(QObject):
-    progress_start = Signal(int)
+    info = Signal(str)
     progress_updated = Signal(int, int)
     finished = Signal()
 
-    def __init__(self, start_year, end_year, base_domain, user_agent, cookies, path, file=None):
+    def __init__(self, start_year, end_year, base_domain, user_agent, cookies, path, file):
         super().__init__()
         self.product_classes = []
         self.start_year = start_year
@@ -229,6 +237,7 @@ class RequestWorker(QObject):
         self.cookies = cookies
         self.file = file
         self.path = path
+        self.logger = setup_logging()
 
 
     @Slot()
@@ -237,22 +246,35 @@ class RequestWorker(QObject):
         total_items = len(years_list)
 
         for i, year in enumerate(years_list):
-            self.progress_start.emit(year)
+            msg = f"Starte mit laden von Jahr {year}"
+            self.info.emit(msg)
+            self.logger.info(msg)
             # Verarbeitung des Elements
-            self.product_classes.extend(request_amazon(base_domain=self.base_domain, year=year, user_agent=self.user_agent, cookies=self.cookies, path=self.path))
+            try:
+                self.product_classes.extend(request_amazon(base_domain=self.base_domain, year=year, user_agent=self.user_agent, cookies=self.cookies, path=self.path))
+            except ConnectionError:
+                msg = f"Verbindung unterbrochen beim Start von Jahr {year}"
+                self.info.emit(msg)
+                self.logger.error(msg)
+                continue
             # Fortschritt aktualisieren und aktuellen Elementnamen übermitteln
             progress = int((i + 1) / total_items * 100)
             self.progress_updated.emit(progress, year)
+            self.logger.info(f"Abgeschlossen mit dem laden von Jahr {year}")
 
+        self.logger.info(f"Starte mit speischern in Excel")
         save_to_excel(product_list=self.product_classes, excel_file=self.file)
         self.finished.emit()
+
 
 if __name__ == "__main__":
     import os
     import sys
     os.makedirs("img", exist_ok=True)
+    logger = setup_logging()
 
     app = QApplication(sys.argv)
     main_window = MyMainWindow()
+    logger.debug("Main window created")
     main_window.show()
     sys.exit(app.exec())

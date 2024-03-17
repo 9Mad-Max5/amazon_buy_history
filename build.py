@@ -11,7 +11,7 @@ script_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), main_fil
 PyInstaller.__main__.run(
     [
         script_path,
-        "--onefile",
+        # "--onefile",
         "--name",
         f"amazon_buy_history_{version}",
     ]
