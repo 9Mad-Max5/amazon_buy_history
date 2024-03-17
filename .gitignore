@@ -172,3 +172,4 @@ credentials.py
 *.pkl_
 test.py
 settings.toml
+logfile.txt

@@ -1,13 +1,14 @@
 import toml
 import getpass
 import os
+import shutil
 
 from constants import toml_file_path
 
 def load_settings():
     # Lade die Einstellungen aus der TOML-Datei
     if not os.path.exists(toml_file_path):
-        os.copy("settings-example.toml", toml_file_path)
+        shutil.copyfile("settings-example.toml", toml_file_path)
 
     with open(toml_file_path, "r") as file:
         settings = toml.load(file)
