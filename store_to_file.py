@@ -227,18 +227,19 @@ def path_to_img(df, file):
 
     # Greifen Sie auf das gewünschte Arbeitsblatt zu
     sheet = workbook.active
+    bild_spalte = "G"
 
     # Füge die Bilder in die entsprechenden Zellen ein
     for r_idx, image_path in enumerate(df["Bild"], start=2):
         try:
             logger.debug(f"Saving {image_path} to {file}")
             img = Image(image_path)
-            sheet.add_image(img, f"F{r_idx}")
+            sheet.add_image(img, f"{bild_spalte}{r_idx}")
 
             # Entferne den Zellwert in der Spalte "Bild"
             sheet.cell(row=r_idx, column=df.columns.get_loc("Bild") + 1, value="")
             sheet.row_dimensions[r_idx].height = img.height * 0.85
-            sheet.column_dimensions["F"].width = img.width / 7
+            sheet.column_dimensions[bild_spalte].width = img.width / 7
 
             # Legen Sie die Wraptext-Eigenschaft auf "True" fest
             sheet.column_dimensions["D"].wraptext = True
