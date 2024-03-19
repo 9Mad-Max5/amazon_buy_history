@@ -42,6 +42,7 @@ class MyMainWindow(QMainWindow):
         self.file = None
         self.logger = setup_logging()
 
+        create_folders(self.path)
         # Create worker thread
         self.worker_thread = None
         self.worker = None
@@ -130,6 +131,7 @@ class MyMainWindow(QMainWindow):
             self.path = path
             self.ui.le_path.setText(self.path)
             update_settings(self.path)
+            self.file = os.path.join(self.path, f"amazon_shopping_history_{self.username}.xlsx")
 
     def start_crawling(self):
         
@@ -252,11 +254,18 @@ class RequestWorker(QObject):
             # Verarbeitung des Elements
             try:
                 self.product_classes.extend(request_amazon(base_domain=self.base_domain, year=year, user_agent=self.user_agent, cookies=self.cookies, path=self.path))
+            except ConnectionResetError:
+                msg = f"Verbindung unterbrochen beim Start von Jahr {year}"
+                self.info.emit(msg)
+                self.logger.error(msg)
+                continue
+
             except ConnectionError:
                 msg = f"Verbindung unterbrochen beim Start von Jahr {year}"
                 self.info.emit(msg)
                 self.logger.error(msg)
                 continue
+
             # Fortschritt aktualisieren und aktuellen Elementnamen übermitteln
             progress = int((i + 1) / total_items * 100)
             self.progress_updated.emit(progress, year)

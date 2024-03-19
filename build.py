@@ -14,6 +14,11 @@ PyInstaller.__main__.run(
         # "--onefile",
         "--name",
         f"amazon_buy_history_{version}",
+        # "--add-data",
+        # "amazon_buy_history/img",
+        "--add-data",
+        "settings-example.toml;.",
+        "--noconfirm",
     ]
 )
 
