@@ -136,9 +136,9 @@ class MyMainWindow(QMainWindow):
     def start_crawling(self):
         
         self.ui.b_start.setEnabled(False)
+        self.ui.ba_progress.setValue(0)
         start_date = self.ui.start_date.date()
         self.start_year = start_date.year()
-        
         self.worker_thread = QThread()
         self.worker_thread.finished.connect(self.worker_thread.deleteLater)
         self.worker = RequestWorker(start_year=self.start_year , end_year=self.end_year,
