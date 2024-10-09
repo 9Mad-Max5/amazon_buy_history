@@ -18,23 +18,32 @@ from constants import *
 from crypto_functions import encrypt_data
 
 import datetime
-from credentials import password
-
-# from credentials import password
 
 
 class AmazonCredentials:
-    def __init__(self, username, password) -> None:
+    def __init__(self, username, password, cookie_pth, cookies=None) -> None:
         self.username = username
         self.password = password
-        self.device_id = (
-            gethostname()
-        )  # Automatisch die Hostname als Device ID verwenden
+        self.cookie_pth = cookie_pth
+        self.cookies = cookies
+
         self.driver = webdriver.Chrome(options=self.set_chrome_options())
         self.wait = WebDriverWait(self.driver, short_wait)
         self.long_wait = WebDriverWait(self.driver, sel_timeout)
-        self.cookie_file = f"{username}_{self.device_id}.pkl"
         self.end_year = self._set_current_year()
+
+        # Cookie handling moved to the gui interface completely
+
+    #     # Automatisch die Hostname als Device ID verwenden
+    #     self.device_id = gethostname()
+    #     self.cookie_file = f"{username}_{self.device_id}.pkl"
+
+    # def _load_cookie_file(self):
+    #     if os.path.exists(self.cookie_file):
+    #         self.load_cookies(cookies)
+    #         return True
+    #     else:
+    #         return False
 
     def _set_current_year(self):
         # Aktuelles Datum und Uhrzeit abrufen
@@ -42,25 +51,19 @@ class AmazonCredentials:
         # Aktuelles Jahr extrahieren
         return now.year
 
-
-    def _load_cookie_file(self):
-        if os.path.exists(self.cookie_file):
-            self.load_cookies(cookies)
-            return True
-        else:
-            return False
-
     def create_driver_running(self, totp=None):
-        '''
+        """
         Create a webdriver for selenium and keep it running.
         Technically deprecated as it was only used to scrape with active browser.
         Using a system of scraping all the contents with a get request.
         It returns a WebDriver object and the user agent
-        '''
+        """
         # Amazon-Website-URL
-        page = f"https://www.amazon.de/your-orders/orders?timeFilter=year-{self.end_year}"
+        page = (
+            f"https://www.amazon.de/your-orders/orders?timeFilter=year-{self.end_year}"
+        )
 
-        if os.path.exists(self.cookie_file):
+        if self.cookies:
             self.driver.get(page)
             try:
                 self.wait.until(
@@ -78,26 +81,24 @@ class AmazonCredentials:
 
         else:
             self.driver.get(page)
-            self.login_procedure( totp)
+            self.login_procedure(totp)
 
         user_agent = self.driver.execute_script("return navigator.userAgent;")
         self.save_cookies()
         return self.driver, user_agent
 
-    def create_driver(
-        self, cookies=None, totp=None
-    ):
-        '''
+    def create_driver(self, cookies=None, totp=None):
+        """
         Create a webdriver for selenium and save the cookies.
         After the webdriver is closed again.
-        '''
+        """
 
         # Amazon-Website-URL
-        page = f"https://www.amazon.de/your-orders/orders?timeFilter=year-{self.end_year}"
+        page = (
+            f"https://www.amazon.de/your-orders/orders?timeFilter=year-{self.end_year}"
+        )
 
-        if os.path.exists(cookie_filename):
-            load_cookies(driver, cookies)
-            self.driver.get(page)
+        if self.cookies:
             try:
                 self.wait.until(
                     EC.presence_of_element_located(
@@ -108,36 +109,29 @@ class AmazonCredentials:
             except:
                 try:
                     self.wait.until(EC.presence_of_element_located((By.ID, "ap_email")))
-                    login_procedure(driver, username, password, sel_timeout, totp)
+                    self.login_procedure(totp)
                 except TimeoutException:
-                    login_procedure_pw(driver, password, sel_timeout, totp)
+                    # Under the assumption that no email needs to be entered this method to just enter the password is valid
+                    self.login_procedure_pw()
 
         else:
             self.driver.get(page)
-            login_procedure(driver, username, password, sel_timeout, totp)
+            self.login_procedure()
 
-        # # Abrufen der Netzwerkinformationen
-        # network_entries = self.driver.execute_cdp_cmd(
-        #     "Network.getResponseBodyForInterception", {"interceptionId": 1}
-        # )
-
-        # # Die Netzwerkeinträge enthalten die Headers
-        # headers = network_entries["headers"]
-        # print("Headers:", headers)
         user_agent = self.driver.execute_script("return navigator.userAgent;")
 
-        save_cookies(driver, cookie_filename, password)
+        self.save_cookies()
         self.driver.quit()
 
         return user_agent
 
-    def save_cookies(self, driver, filename, password):
+    def save_cookies(self):
         # Hole die Cookies vom WebDriver
         cookies = self.driver.get_cookies()
 
-        enc_cookies = encrypt_data(cookies, password)
+        enc_cookies = encrypt_data(cookies, self.password)
         # Speichere die Cookies in einer Datei
-        with open(filename, "wb") as file:
+        with open(self.cookie_pth, "wb") as file:
             pickle.dump(enc_cookies, file)
 
     def load_cookies(self, cookies):
@@ -159,12 +153,12 @@ class AmazonCredentials:
         # Disable network tracking
         self.driver.execute_cdp_cmd("Network.disable", {})
 
-    def login_procedure(self, username, password, sel_timeout, totp=None):
+    def login_procedure(self, totp=None):
         try:
             username_textbox = self.long_wait.until(
                 EC.presence_of_element_located((By.ID, "ap_email"))
             )
-            username_textbox.send_keys(username)
+            username_textbox.send_keys(self.username)
         except TimeoutException:
             pass
 
@@ -172,7 +166,7 @@ class AmazonCredentials:
             password_textbox = self.long_wait.until(
                 EC.presence_of_element_located((By.ID, "ap_password"))
             )
-            password_textbox.send_keys(password)
+            password_textbox.send_keys(self.password)
         except TimeoutException:
             pass
 
@@ -251,12 +245,16 @@ class AmazonCredentials:
             except TimeoutException:
                 pass
 
-    def login_procedure_pw(self, driver, password, sel_timeout, totp=None):
+    def login_procedure_pw(self, totp=None):
+        """
+        Login procedure where only a password is required for login.
+        This happens if the tick was set for remember me.
+        """
         try:
             password_textbox = self.long_wait.until(
                 EC.presence_of_element_located((By.ID, "ap_password"))
             )
-            password_textbox.send_keys(password)
+            password_textbox.send_keys(self.password)
         except TimeoutException:
             pass
 
@@ -284,7 +282,8 @@ class AmazonCredentials:
             pass
 
     def set_chrome_options(self) -> Options:
-        """Sets chrome options for Selenium.
+        """
+        Sets chrome options for Selenium.
         Chrome options for headless browser is enabled.
         """
         chrome_options = Options()
