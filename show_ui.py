@@ -9,7 +9,7 @@ from amazon_requester import request_amazon
 from socket import gethostname
 from datetime import datetime
 
-from crypto_functions import decrypt_data 
+from crypto_functions import decrypt_data
 
 from settings_handler import *
 from version import version
@@ -22,6 +22,8 @@ from classes import (
     MissingTotpError,
 )
 import pickle
+import requests
+
 
 class MyMainWindow(QMainWindow):
     def __init__(self):
@@ -38,11 +40,9 @@ class MyMainWindow(QMainWindow):
         self.cookies = None
         self.end_year = self.get_actual_year()
         self.cookie_filename = None
-        self.path=load_settings()
         self.file = None
         self.logger = setup_logging()
 
-        create_folders(self.path)
         # Create worker thread
         self.worker_thread = None
         self.worker = None
@@ -58,7 +58,6 @@ class MyMainWindow(QMainWindow):
         self.ui.cb_local.addItems(["de", "en", "es", "fr"])
         self.ui.cb_local.currentIndexChanged.connect(self.on_language_change)
         self.local = self.ui.cb_local.currentText()
-        self.ui.le_path.setText(self.path)
         self.ui.l_ver_n.setText(version)
 
         # Verbinde einen Button mit einer Funktion
@@ -66,6 +65,8 @@ class MyMainWindow(QMainWindow):
         self.ui.b_logout.clicked.connect(self.logout)
         self.ui.b_start.clicked.connect(self.start_crawling)
         self.ui.b_set_path.clicked.connect(self.set_path)
+        self.ui.le_path.setText(load_settings())
+        create_folders(self.ui.le_path.text())
 
     # Button functions
     def get_login_infos(self):
@@ -74,15 +75,17 @@ class MyMainWindow(QMainWindow):
         if validate_email(self.ui.le_email.text()):
             self.credentials["mail"] = self.ui.le_email.text()
             self.username = self.credentials["mail"].split("@")[0]
-            self.file = os.path.join(self.path, f"amazon_shopping_history_{self.username}.xlsx")
+            self.file = os.path.join(
+                self.ui.le_path.text(), f"amazon_shopping_history_{self.username}.xlsx"
+            )
         else:
             self.ui.l_email_error.setText(
                 "Ungültige eingabe! Keine valide Mailadresse!"
             )
             return
-        
+
         self.set_cookie_filename()
-        
+
         if len(self.ui.le_password.text()) > 0:
             self.credentials["pw"] = self.ui.le_password.text()
 
@@ -128,22 +131,30 @@ class MyMainWindow(QMainWindow):
     def set_path(self):
         path = QFileDialog.getExistingDirectory(self, "Ordner auswählen")
         if path:
-            self.path = path
-            self.ui.le_path.setText(self.path)
-            update_settings(self.path)
-            self.file = os.path.join(self.path, f"amazon_shopping_history_{self.username}.xlsx")
+            # self.path = path
+            self.ui.le_path.setText(path)
+            update_settings(path)
+            self.file = os.path.join(
+                path, f"amazon_shopping_history_{self.username}.xlsx"
+            )
 
     def start_crawling(self):
-        
+
         self.ui.b_start.setEnabled(False)
         self.ui.ba_progress.setValue(0)
         start_date = self.ui.start_date.date()
         self.start_year = start_date.year()
         self.worker_thread = QThread()
         self.worker_thread.finished.connect(self.worker_thread.deleteLater)
-        self.worker = RequestWorker(start_year=self.start_year , end_year=self.end_year,
-                                     base_domain=self.base_domain, user_agent=self.user_agent,
-                                       cookies=self.cookies, path=self.path, file=self.file)
+        self.worker = RequestWorker(
+            start_year=self.start_year,
+            end_year=self.end_year,
+            base_domain=self.base_domain,
+            user_agent=self.user_agent,
+            cookies=self.cookies,
+            path=self.ui.le_path.text(),
+            file=self.file,
+        )
         self.worker.moveToThread(self.worker_thread)
         self.worker.finished.connect(self.worker_finished)
         self.worker.progress_updated.connect(self.update_progress)
@@ -153,14 +164,16 @@ class MyMainWindow(QMainWindow):
 
     def load_cookies_to_var(self):
         if os.path.exists(self.cookie_filename):
-            with open(self.cookie_filename, 'rb') as f:
+            with open(self.cookie_filename, "rb") as f:
                 enc_cookies = pickle.load(f)
 
-            self.cookies = decrypt_data(encrypted_data=enc_cookies,password=self.credentials["pw"])
+            self.cookies = decrypt_data(
+                encrypted_data=enc_cookies, password=self.credentials["pw"]
+            )
 
     def set_cookie_filename(self):
         device_id = gethostname()
-        self.cookie_filename = f"{device_id}_{self.credentials["mail"]}.pkl"
+        self.cookie_filename = f"{device_id}_{self.credentials['mail']}.pkl"
 
     def get_actual_year(self):
         now = datetime.now()
@@ -202,7 +215,7 @@ class MyMainWindow(QMainWindow):
         #         self.worker_thread.quit()
         #         self.worker_thread.wait()
         return super().event(event)
-    
+
     def clear_error_label(self):
         self.ui.l_totp_error.setText("")
         self.ui.l_email_error.setText("")
@@ -224,12 +237,15 @@ class MyMainWindow(QMainWindow):
         self.ui.b_start.setEnabled(True)
         self.worker_thread.quit()
 
+
 class RequestWorker(QObject):
     info = Signal(str)
     progress_updated = Signal(int, int)
     finished = Signal()
 
-    def __init__(self, start_year, end_year, base_domain, user_agent, cookies, path, file):
+    def __init__(
+        self, start_year, end_year, base_domain, user_agent, cookies, path, file
+    ):
         super().__init__()
         self.product_classes = []
         self.start_year = start_year
@@ -240,7 +256,6 @@ class RequestWorker(QObject):
         self.file = file
         self.path = path
         self.logger = setup_logging()
-
 
     @Slot()
     def run(self):
@@ -253,25 +268,39 @@ class RequestWorker(QObject):
             self.logger.info(msg)
             # Verarbeitung des Elements
             try:
-                self.product_classes.extend(request_amazon(base_domain=self.base_domain, year=year, user_agent=self.user_agent, cookies=self.cookies, path=self.path))
+                self.product_classes.extend(
+                    request_amazon(
+                        base_domain=self.base_domain,
+                        year=year,
+                        user_agent=self.user_agent,
+                        cookies=self.cookies,
+                        path=self.path,
+                    )
+                )
             except ConnectionResetError:
                 msg = f"Verbindung unterbrochen beim Start von Jahr {year}"
                 self.info.emit(msg)
                 self.logger.error(msg)
                 continue
 
-            except ConnectionError:
+            except requests.exceptions.ConnectionError:
                 msg = f"Verbindung unterbrochen beim Start von Jahr {year}"
                 self.info.emit(msg)
                 self.logger.error(msg)
                 continue
+
+            # except ProtocolError:
+            #     msg = f"Verbindung unterbrochen beim Start von Jahr {year}"
+            #     self.info.emit(msg)
+            #     self.logger.error(msg)
+            #     continue
 
             # Fortschritt aktualisieren und aktuellen Elementnamen übermitteln
             progress = int((i + 1) / total_items * 100)
             self.progress_updated.emit(progress, year)
             self.logger.info(f"Abgeschlossen mit dem laden von Jahr {year}")
 
-        self.logger.info(f"Starte mit speischern in Excel")
+        self.logger.info(f"Starte mit speichern in Excel")
         save_to_excel(product_list=self.product_classes, excel_file=self.file)
         self.finished.emit()
 
@@ -279,6 +308,7 @@ class RequestWorker(QObject):
 if __name__ == "__main__":
     import os
     import sys
+
     os.makedirs("img", exist_ok=True)
     logger = setup_logging()
 

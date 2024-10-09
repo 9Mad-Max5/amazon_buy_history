@@ -231,22 +231,23 @@ def path_to_img(df, file):
 
     # Füge die Bilder in die entsprechenden Zellen ein
     for r_idx, image_path in enumerate(df["Bild"], start=2):
-        try:
-            logger.debug(f"Saving {image_path} to {file}")
-            img = Image(image_path)
-            sheet.add_image(img, f"{bild_spalte}{r_idx}")
+        if image_path:
+            try:
+                logger.debug(f"Saving {image_path} to {file}")
+                img = Image(image_path)
+                sheet.add_image(img, f"{bild_spalte}{r_idx}")
 
-            # Entferne den Zellwert in der Spalte "Bild"
-            sheet.cell(row=r_idx, column=df.columns.get_loc("Bild") + 1, value="")
-            sheet.row_dimensions[r_idx].height = img.height * 0.85
-            sheet.column_dimensions[bild_spalte].width = img.width / 7
+                # Entferne den Zellwert in der Spalte "Bild"
+                # sheet.cell(row=r_idx, column=df.columns.get_loc("Bild") + 1, value="")
+                sheet.row_dimensions[r_idx].height = img.height * 0.85
+                sheet.column_dimensions[bild_spalte].width = img.width / 7
 
-            # Legen Sie die Wraptext-Eigenschaft auf "True" fest
-            sheet.column_dimensions["D"].wraptext = True
+                # Legen Sie die Wraptext-Eigenschaft auf "True" fest
+                sheet.column_dimensions["D"].wraptext = True
 
-        except Exception as e:
-            print(e)
-            logger.error(e)
+            except Exception as e:
+                print(e)
+                logger.error(e)
 
     # Speichere das Excel-Blatt
     workbook.save(file)

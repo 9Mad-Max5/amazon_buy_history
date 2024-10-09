@@ -14,6 +14,7 @@ PyInstaller.__main__.run(
         # "--onefile",
         "--name",
         f"amazon_buy_history_{version}",
+        "--noconsole",
         # "--add-data",
         # "amazon_buy_history/img",
         "--add-data",
