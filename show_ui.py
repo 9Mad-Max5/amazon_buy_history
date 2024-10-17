@@ -1,10 +1,10 @@
 from gui_ui import Ui_MainWindow
-from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog
+from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog, QDialog
 from PySide6.QtCore import QObject, QThread, Signal, Slot, QEvent
 
 from validate_email_address import validate_email
 from store_to_file import save_to_excel
-from amazon_crawler import create_driver
+from amazon_login import AmazonLogin
 from amazon_requester import request_amazon
 from socket import gethostname
 from datetime import datetime
@@ -23,7 +23,7 @@ from classes import (
 )
 import pickle
 import requests
-
+from totp import TotpPopup
 
 class MyMainWindow(QMainWindow):
     def __init__(self):
@@ -89,7 +89,7 @@ class MyMainWindow(QMainWindow):
         if len(self.ui.le_password.text()) > 0:
             self.credentials["pw"] = self.ui.le_password.text()
 
-        self.load_cookies_to_var()
+        # self.load_cookies_to_var()
 
         if self.ui.le_totp.text():
             if self.is_valid_totp(self.ui.le_totp.text()):
@@ -103,14 +103,14 @@ class MyMainWindow(QMainWindow):
         self.credentials["totp"] = totp
 
         if "mail" in self.credentials and "pw" in self.credentials:
+            login = AmazonLogin(
+                username=self.credentials["mail"],
+                password=self.credentials["pw"],
+                cookie_pth=self.cookie_filename,
+                main_window=self
+            )
             try:
-                self.user_agent = create_driver(
-                    username=self.credentials["mail"],
-                    password=self.credentials["pw"],
-                    cookie_filename=self.cookie_filename,
-                    cookies=self.cookies,
-                    totp=self.credentials["totp"],
-                )
+                self.user_agent = login.create_driver()
                 self.change_view(1)
                 self.load_cookies_to_var()
                 self.logger.debug(f"Erfolgreich angemeldet")
@@ -199,6 +199,21 @@ class MyMainWindow(QMainWindow):
             return True
 
         return False
+    
+    def open_totp_popup(self):
+        totp_dialog = TotpPopup()  # Erstelle den Dialog
+
+        # Warte auf die Benutzerinteraktion
+        if totp_dialog.exec() == QDialog.Accepted:
+            totp_code = totp_dialog.get_totp()
+            if totp_code:
+                print(f"Eingegebener TOTP-Code: {totp_code}")
+                return totp_code
+                # Hier kannst du den TOTP-Code weiter verarbeiten
+            else:
+                print("Kein TOTP-Code eingegeben.")
+        else:
+            print("Dialog wurde abgebrochen.")
 
     def clear_all(self):
         self.ui.le_email.clear()

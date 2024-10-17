@@ -92,6 +92,7 @@ class Ui_MainWindow(object):
 
         self.le_totp = QLineEdit(self.verticalLayoutWidget)
         self.le_totp.setObjectName(u"le_totp")
+        self.le_totp.setEnabled(False)
 
         self.formLayout.setWidget(4, QFormLayout.FieldRole, self.le_totp)
 
@@ -230,7 +231,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
 
-        self.stackedWidget.setCurrentIndex(1)
+        self.stackedWidget.setCurrentIndex(0)
 
 
         QMetaObject.connectSlotsByName(MainWindow)

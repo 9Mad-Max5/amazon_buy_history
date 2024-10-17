@@ -1,15 +1,19 @@
 import pickle
 import os
-
+import sys
+from PySide6.QtWidgets import (
+    QApplication,
+    QDialog,
+)
 from socket import gethostname
-
+from totp import TotpPopup
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException
-
+# from show_ui import MyMainWindow
 
 from amazon_parser import scrape_order_deep
 
@@ -20,12 +24,13 @@ from crypto_functions import encrypt_data
 import datetime
 
 
-class AmazonCredentials:
-    def __init__(self, username, password, cookie_pth, cookies=None) -> None:
+class AmazonLogin:
+    def __init__(self, username, password, cookie_pth, cookies=None, main_window=None) -> None:
         self.username = username
         self.password = password
         self.cookie_pth = cookie_pth
         self.cookies = cookies
+        self.main_window = main_window
 
         self.driver = webdriver.Chrome(options=self.set_chrome_options())
         self.wait = WebDriverWait(self.driver, short_wait)
@@ -75,19 +80,28 @@ class AmazonCredentials:
             except:
                 try:
                     self.wait.until(EC.presence_of_element_located((By.ID, "ap_email")))
-                    self.login_procedure(totp)
+                    self.login_procedure()
                 except TimeoutException:
-                    self.login_procedure_pw(totp)
+                    print("Attempt with just a password")
+                    try:
+                        self.login_procedure_pw()
+                    except TimeoutException:
+                        raise PermissionError(
+                            "Couldn't login either with password and mail nor else"
+                        )
 
         else:
             self.driver.get(page)
-            self.login_procedure(totp)
+            try:
+                self.login_procedure()
+            except TimeoutException:
+                raise PermissionError("Couldn't login initially")
 
         user_agent = self.driver.execute_script("return navigator.userAgent;")
         self.save_cookies()
         return self.driver, user_agent
 
-    def create_driver(self, cookies=None, totp=None):
+    def create_driver(self, totp=None):
         """
         Create a webdriver for selenium and save the cookies.
         After the webdriver is closed again.
@@ -112,11 +126,19 @@ class AmazonCredentials:
                     self.login_procedure(totp)
                 except TimeoutException:
                     # Under the assumption that no email needs to be entered this method to just enter the password is valid
-                    self.login_procedure_pw()
+                    try:
+                        self.login_procedure_pw()
+                    except TimeoutException:
+                        raise PermissionError(
+                            "Couldn't login either with password and mail nor else"
+                        )
 
         else:
             self.driver.get(page)
-            self.login_procedure()
+            try:
+                self.login_procedure()
+            except TimeoutException:
+                raise PermissionError("Couldn't login initially")
 
         user_agent = self.driver.execute_script("return navigator.userAgent;")
 
@@ -154,22 +176,22 @@ class AmazonCredentials:
         self.driver.execute_cdp_cmd("Network.disable", {})
 
     def login_procedure(self, totp=None):
-        try:
-            username_textbox = self.long_wait.until(
-                EC.presence_of_element_located((By.ID, "ap_email"))
-            )
-            username_textbox.send_keys(self.username)
-        except TimeoutException:
-            pass
+        username_textbox = self.long_wait.until(
+            EC.presence_of_element_located((By.ID, "ap_email"))
+        )
+        username_textbox.send_keys(self.username)
 
-        try:
-            password_textbox = self.long_wait.until(
-                EC.presence_of_element_located((By.ID, "ap_password"))
-            )
-            password_textbox.send_keys(self.password)
-        except TimeoutException:
-            pass
+        submit_mail = self.long_wait.until(
+            EC.presence_of_element_located((By.ID, "continue"))
+        )
+        submit_mail.click()
 
+        password_textbox = self.long_wait.until(
+            EC.presence_of_element_located((By.ID, "ap_password"))
+        )
+        password_textbox.send_keys(self.password)
+
+        # For some reason it was default set to true no idea why
         remember_checkbox = self.wait.until(
             EC.presence_of_element_located(
                 (By.XPATH, '//input[@type="checkbox" and @name="rememberMe"]')
@@ -204,59 +226,58 @@ class AmazonCredentials:
         except TimeoutException:
             pass
 
-        if totp:
-            try:
-                totp_textbox = self.long_wait.until(
-                    EC.presence_of_element_located((By.ID, "auth-mfa-otpcode"))
-                )
-                totp_textbox.send_keys(totp)
-            except TimeoutException:
-                pass
-
-            # Warte darauf, dass das Element anklickbar ist
-            totp_store_checkbox = self.long_wait.until(
-                EC.element_to_be_clickable((By.ID, "auth-mfa-remember-device"))
+        try:
+            totp_textbox = self.long_wait.until(
+                EC.presence_of_element_located((By.ID, "auth-mfa-otpcode"))
             )
-            # Klicke auf das Element
-            totp_store_checkbox.click()
+            totp = self.get_totp_value()
+            totp_textbox.send_keys(totp)
+        except TimeoutException:
+            # Checking if there is a totp field
+            pass
 
-            auth_button = self.long_wait.until(
-                EC.presence_of_element_located((By.ID, "auth-signin-button"))
+        # Warte darauf, dass das Element anklickbar ist
+        totp_store_checkbox = self.long_wait.until(
+            EC.element_to_be_clickable((By.ID, "auth-mfa-remember-device"))
+        )
+        # Klicke auf das Element
+        totp_store_checkbox.click()
+
+        auth_button = self.long_wait.until(
+            EC.presence_of_element_located((By.ID, "auth-signin-button"))
+        )
+        auth_button.click()
+
+        try:
+            self.wait.until(
+                EC.text_to_be_present_in_element(
+                    (By.CLASS_NAME, "a-list-item"),
+                    "Der eingegebene Code ist ungültig. Bitte erneut versuchen.",
+                )
             )
-            auth_button.click()
+            raise InvalidTotpError("Ungültiger ToTp oder 2FA Code")
+        except TimeoutException:
+            pass
 
-            try:
-                self.wait.until(
-                    EC.text_to_be_present_in_element(
-                        (By.CLASS_NAME, "a-list-item"),
-                        "Der eingegebene Code ist ungültig. Bitte erneut versuchen.",
-                    )
-                )
-                raise InvalidTotpError("Ungültiger ToTp oder 2FA Code")
-            except TimeoutException:
-                pass
-
-        else:
-            try:
-                self.wait.until(
-                    EC.presence_of_element_located((By.ID, "auth-mfa-otpcode"))
-                )
-                raise MissingTotpError("Bitte geben sie den Zweiten Faktor an!")
-            except TimeoutException:
-                pass
+        # else:
+        #     try:
+        #         self.wait.until(
+        #             EC.presence_of_element_located((By.ID, "auth-mfa-otpcode"))
+        #         )
+        #         raise MissingTotpError("Bitte geben sie den Zweiten Faktor an!")
+        #     except TimeoutException:
+        #         pass
 
     def login_procedure_pw(self, totp=None):
         """
         Login procedure where only a password is required for login.
         This happens if the tick was set for remember me.
         """
-        try:
-            password_textbox = self.long_wait.until(
-                EC.presence_of_element_located((By.ID, "ap_password"))
-            )
-            password_textbox.send_keys(self.password)
-        except TimeoutException:
-            pass
+
+        password_textbox = self.long_wait.until(
+            EC.presence_of_element_located((By.ID, "ap_password"))
+        )
+        password_textbox.send_keys(self.password)
 
         remember_checkbox = self.wait.until(
             EC.presence_of_element_located(
@@ -281,16 +302,21 @@ class AmazonCredentials:
         except TimeoutException:
             pass
 
+    def get_totp_value(self):
+        return self.main_window.open_totp_popup()
+    
     def set_chrome_options(self) -> Options:
         """
         Sets chrome options for Selenium.
         Chrome options for headless browser is enabled.
         """
         chrome_options = Options()
-        chrome_options.add_argument("--headless")
+        # chrome_options.add_argument("--headless")
         chrome_options.add_argument("--window-size=1920,1080")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--disable-webauthn")
+        chrome_options.add_argument("--disable-features=PasswordAutofillPublicAPI")
         # chrome_options.add_argument("--remote-debugging-port=9222")
         chrome_prefs = {}
         chrome_options.experimental_options["prefs"] = chrome_prefs
