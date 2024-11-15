@@ -103,10 +103,13 @@ class MyMainWindow(QMainWindow):
         self.credentials["totp"] = totp
 
         if "mail" in self.credentials and "pw" in self.credentials:
+            self.load_cookies_to_var()
+
             login = AmazonLogin(
                 username=self.credentials["mail"],
                 password=self.credentials["pw"],
                 cookie_pth=self.cookie_filename,
+                cookies=self.cookies,
                 main_window=self
             )
             try:
@@ -315,7 +318,9 @@ class RequestWorker(QObject):
             self.progress_updated.emit(progress, year)
             self.logger.info(f"Abgeschlossen mit dem laden von Jahr {year}")
 
-        self.logger.info(f"Starte mit speichern in Excel")
+        msg=f"Starte mit speichern in Excel"
+        self.info.emit(msg)
+        self.logger.info(msg)
         save_to_excel(product_list=self.product_classes, excel_file=self.file)
         self.finished.emit()
 

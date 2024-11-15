@@ -201,7 +201,6 @@ def load_cookies(driver, cookies):
     # Disable network tracking
     driver.execute_cdp_cmd("Network.disable", {})
 
-
 def login_procedure(driver, username, password, sel_timeout, totp=None):
     try:
         username_textbox = WebDriverWait(driver, sel_timeout).until(

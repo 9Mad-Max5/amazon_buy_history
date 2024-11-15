@@ -151,21 +151,124 @@ from logger_config import setup_logging
 #     path_to_img(df=df, file=file)
 
 
+# def save_to_excel(product_list, excel_file, lang="de"):
+#     # Überprüfen, ob die Excel-Datei bereits existiert
+#     logger = setup_logging()
+#     logger.info(f"Saving {len(product_list)} products to {excel_file}")
+#     if os.path.exists(excel_file):
+#         # Lade vorhandene Daten aus der Excel-Datei
+#         existing_df = pd.read_excel(excel_file)
+#         # Überprüfe Duplikate basierend auf der Bestellnummer
+#         unique_order_numbers = set(existing_df["Bestellnummer"])
+#     else:
+#         # Erstelle ein leeres DataFrame, wenn die Excel-Datei nicht existiert
+#         existing_df = pd.DataFrame()
+#         unique_order_numbers = set()
+
+#     # Erstelle ein leeres DataFrame für die neuen Daten
+#     new_data = {
+#         "Bestelldatum": [product.order_date for product in product_list],
+#         "Lieferdatum": [product.delivery_date for product in product_list],
+#         "Bestellnummer": [product.order_number for product in product_list],
+#         "Produktname": [product.product_name for product in product_list],
+#         "Preis": [product.product_price for product in product_list],
+#         "Bild": [product.image_filename for product in product_list],
+#     }
+
+#     # Überprüfe Duplikate basierend auf der Bestellnummer, füge nur ein, was eindeutig ist
+#     new_data = {
+#         col: [
+#             val
+#             for idx, val in enumerate(new_data[col])
+#             if product_list[idx].order_number not in unique_order_numbers
+#         ]
+#         for col in new_data
+#     }
+
+#     # Setzen Sie die locale auf Deutsch für die Währungsformatierung
+#     locale.setlocale(locale.LC_ALL, lang)
+
+#     # Füge neue Daten zum bestehenden DataFrame hinzu
+#     df = pd.DataFrame(new_data)
+
+#     # Definiere das Datumsformat
+#     date_format = "%d. %B %Y"  # "18. Dezember 2022"
+#     df["Bestelldatum"] = pd.to_datetime(
+#         df["Bestelldatum"], format=date_format, dayfirst=True
+#     )
+
+#     df["Preis"] = df["Preis"].apply(
+#         lambda x: str(x).replace("€", "") if isinstance(x, str) else x
+#     )
+#     df["Preis"] = df["Preis"].apply(
+#         lambda x: str(x).replace(",", ".") if isinstance(x, str) else x
+#     )
+#     df["Preis"] = pd.to_numeric(df["Preis"])
+
+#     # df["Preis"] = df["Preis"].apply(locale.currency)
+
+#     updated_df = pd.concat([existing_df, df], ignore_index=True)
+
+#     # Speichere das aktualisierte DataFrame in einer Excel-Datei
+#     try:
+#         updated_df.to_excel(excel_file, index=False, engine="openpyxl")
+#         path_to_img(df=updated_df, file=excel_file)
+#     except PermissionError as e:
+#         print(str(e))
+#         logger.error(str(e))
+#     finally:
+#         return
+
+
+# def path_to_img(df, file):
+#     logger = setup_logging()
+#     # Öffnen Sie die vorhandene Excel-Datei
+#     workbook = load_workbook(file)
+
+#     # Greifen Sie auf das gewünschte Arbeitsblatt zu
+#     sheet = workbook.active
+#     bild_spalte = "G"
+
+#     # Füge die Bilder in die entsprechenden Zellen ein
+#     for r_idx, image_path in enumerate(df["Bild"], start=2):
+#         if image_path:
+#             try:
+#                 logger.debug(f"Saving {image_path} to {file}")
+#                 img = Image(image_path)
+#                 sheet.add_image(img, f"{bild_spalte}{r_idx}")
+
+#                 # Entferne den Zellwert in der Spalte "Bild"
+#                 # sheet.cell(row=r_idx, column=df.columns.get_loc("Bild") + 1, value="")
+#                 sheet.row_dimensions[r_idx].height = img.height * 0.85
+#                 sheet.column_dimensions[bild_spalte].width = img.width / 7
+
+#                 # Legen Sie die Wraptext-Eigenschaft auf "True" fest
+#                 sheet.column_dimensions["D"].wraptext = True
+
+#             except Exception as e:
+#                 print(e)
+#                 logger.error(e)
+
+#     # Speichere das Excel-Blatt
+#     workbook.save(file)
+
+import xlwings as xw
+
 def save_to_excel(product_list, excel_file, lang="de"):
-    # Überprüfen, ob die Excel-Datei bereits existiert
     logger = setup_logging()
     logger.info(f"Saving {len(product_list)} products to {excel_file}")
-    if os.path.exists(excel_file):
-        # Lade vorhandene Daten aus der Excel-Datei
-        existing_df = pd.read_excel(excel_file)
-        # Überprüfe Duplikate basierend auf der Bestellnummer
-        unique_order_numbers = set(existing_df["Bestellnummer"])
-    else:
-        # Erstelle ein leeres DataFrame, wenn die Excel-Datei nicht existiert
-        existing_df = pd.DataFrame()
-        unique_order_numbers = set()
 
-    # Erstelle ein leeres DataFrame für die neuen Daten
+    # Excel öffnen oder erstellen
+    if os.path.exists(excel_file):
+        app = xw.App(visible=False)
+        wb = app.books.open(excel_file)
+    else:
+        app = xw.App(visible=False)
+        wb = app.books.add()
+
+    sheet = wb.sheets[0]  # Verwende das erste Arbeitsblatt
+
+    # Erstelle ein DataFrame mit den neuen Daten
     new_data = {
         "Bestelldatum": [product.order_date for product in product_list],
         "Lieferdatum": [product.delivery_date for product in product_list],
@@ -175,79 +278,33 @@ def save_to_excel(product_list, excel_file, lang="de"):
         "Bild": [product.image_filename for product in product_list],
     }
 
-    # Überprüfe Duplikate basierend auf der Bestellnummer, füge nur ein, was eindeutig ist
-    new_data = {
-        col: [
-            val
-            for idx, val in enumerate(new_data[col])
-            if product_list[idx].order_number not in unique_order_numbers
-        ]
-        for col in new_data
-    }
-
-    # Setzen Sie die locale auf Deutsch für die Währungsformatierung
-    locale.setlocale(locale.LC_ALL, lang)
-
-    # Füge neue Daten zum bestehenden DataFrame hinzu
     df = pd.DataFrame(new_data)
 
-    # Definiere das Datumsformat
-    date_format = "%d. %B %Y"  # "18. Dezember 2022"
-    df["Bestelldatum"] = pd.to_datetime(
-        df["Bestelldatum"], format=date_format, dayfirst=True
-    )
+    # Finde die nächste leere Zeile, um neue Daten hinzuzufügen
+    start_row = sheet.range("A" + str(sheet.cells.last_cell.row)).end('up').row + 1
+    logger.debug(f"Inserting data starting at row {start_row}")
 
-    df["Preis"] = df["Preis"].apply(
-        lambda x: str(x).replace("€", "") if isinstance(x, str) else x
-    )
-    df["Preis"] = df["Preis"].apply(
-        lambda x: str(x).replace(",", ".") if isinstance(x, str) else x
-    )
-    df["Preis"] = pd.to_numeric(df["Preis"])
+    # Füge die Daten ein
+    sheet.range(f"A{start_row}").value = df[["Bestelldatum", "Lieferdatum", "Bestellnummer", "Produktname", "Preis"]].values
 
-    # df["Preis"] = df["Preis"].apply(locale.currency)
-
-    updated_df = pd.concat([existing_df, df], ignore_index=True)
-
-    # Speichere das aktualisierte DataFrame in einer Excel-Datei
-    try:
-        updated_df.to_excel(excel_file, index=False, engine="openpyxl")
-        path_to_img(df=updated_df, file=excel_file)
-    except PermissionError as e:
-        print(str(e))
-        logger.error(str(e))
-    finally:
-        return
-
-
-def path_to_img(df, file):
-    logger = setup_logging()
-    # Öffnen Sie die vorhandene Excel-Datei
-    workbook = load_workbook(file)
-
-    # Greifen Sie auf das gewünschte Arbeitsblatt zu
-    sheet = workbook.active
-    bild_spalte = "G"
-
-    # Füge die Bilder in die entsprechenden Zellen ein
-    for r_idx, image_path in enumerate(df["Bild"], start=2):
-        if image_path:
+    # Bilder direkt einfügen
+    for r_idx, image_path in enumerate(df["Bild"], start=start_row):
+        if image_path and os.path.exists(image_path):
             try:
-                logger.debug(f"Saving {image_path} to {file}")
-                img = Image(image_path)
-                sheet.add_image(img, f"{bild_spalte}{r_idx}")
-
-                # Entferne den Zellwert in der Spalte "Bild"
-                # sheet.cell(row=r_idx, column=df.columns.get_loc("Bild") + 1, value="")
-                sheet.row_dimensions[r_idx].height = img.height * 0.85
-                sheet.column_dimensions[bild_spalte].width = img.width / 7
-
-                # Legen Sie die Wraptext-Eigenschaft auf "True" fest
-                sheet.column_dimensions["D"].wraptext = True
-
+                logger.debug(f"Inserting {image_path} into Excel at row {r_idx}")
+                img = Image.open(image_path)
+                sheet.pictures.add(image_path, 
+                                   left=sheet.range(f"G{r_idx}").left,  # Spalte G für Bilder
+                                   top=sheet.range(f"G{r_idx}").top,
+                                   width=img.width * 0.5,  # Skaliere das Bild
+                                   height=img.height * 0.5)
+                # Passe die Zeilenhöhe an
+                sheet.range(f"G{r_idx}").row_height = img.height * 0.5
             except Exception as e:
-                print(e)
-                logger.error(e)
+                logger.error(f"Error inserting image at row {r_idx}: {e}")
 
-    # Speichere das Excel-Blatt
-    workbook.save(file)
+    # Speichere und schließe die Datei
+    wb.save(excel_file)
+    wb.close()
+    app.quit()
+    logger.info(f"File saved successfully to {excel_file}")
